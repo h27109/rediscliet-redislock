@@ -1,55 +1,52 @@
-# Description
+# 介绍
 
-- Only two files included. One hpp file and one cpp file.
-- Depend on hiredis.
-- Support both single node mode and cluster mode.
-- Support pipeline.
-- Use connection pool.
-- Thread safe.
-- Reconnect automatically.
-- Do not support windows yet. Find a read-write lock to replace the 'pthread_rwlock_t' if you want to use this on windows:)
-- (Thanks for the Brian's help.)
-
-# TODO
-
-- Optimize the reconnect function.
-- Support pub/sub and transaction.
-- Support scan in an unsafe way.
-
-# License
-
-This program was written by Shawn XU and is released under the BSD license.
+一个简单易用的C++客户端，只依赖于hiredis。支持集群和主备。支持分布式锁。
 
 # Usage
-
 ```c++
-#include "RedisClient.hpp"
-
 int main()
-{
-    CRedisClient redisCli;
-    if (!redisCli.Initialize("127.0.0.1", 6379, 2, 10))
-    {
-        std::cout << "connect to redis failed" << std::endl;
-        return -1;
-    }
+    boost::shared_ptr<CRedisClient> redisCli = boost::shared_ptr<CRedisClient>(new CRedisClient());
+    string server = "172.20.12.1";
+    int port1 = 7000;
+    int port2 = 7001;
+    int port3 = 7002;
+    int port4 = 7003;
+    int port5 = 7004;
+    int port6 = 7005;
+    vector<pair<string, int>>servervec;
+    servervec.push_back(pair<string, int>(server, port1));
+    servervec.push_back(pair<string, int>(server, port2));
+    servervec.push_back(pair<string, int>(server, port3));
+    servervec.push_back(pair<string, int>(server, port4));
+    servervec.push_back(pair<string, int>(server, port5));
+    servervec.push_back(pair<string, int>(server, port6));
 
-    std::string strKey = "key_1";
-    std::string strVal;
-    if (redisCli.Get(strKey, &strVal) == RC_SUCCESS)
+	if(!redisCli->Initialize(servervec, 2, 10, true))
     {
-        std::cout << "key_1 has value " << strVal << std::endl;
         return 0;
     }
-    else
-    {
-        std::cout << "request failed" << std::endl;
-        return -1;
-    }
-}
-```
 
-You can view the test file if you want to know more using details about this client.
+    for (int i = 0; i < 10; i++)
+    {
+        std::string strKey("key_" + boost::to_string(i));
+        if (int iret = redisCli->Del(strKey) != RC_SUCCESS)
+        {
+            std::cout << "del key:" << strKey << "failed, error=" << iret << std::endl;
+            break;
+        }
+        std::string strVal("value_" + boost::to_string(i));
+        if (redisCli->Set(strKey, strVal) != RC_SUCCESS)
+        {
+            std::cout << "set key: " << strKey << " failed" << std::endl;
+            break;
+        }
+        if (redisCli->Get(strKey, &strVal) != RC_SUCCESS)
+        {
+            std::cout << "get key: " << strKey << ": vaule: " << strVal << " failed " << std::endl;
+            break;
+        }
+    }
+```
 
 
 
